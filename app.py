@@ -16,9 +16,6 @@ def main():
     # Handle missing values
     data.dropna(subset=['Value', 'Label'], inplace=True)
 
-    # Display dataset
-    st.write("Sample Data:", data.head())
-
     # Preprocess data
     x = data['Value']
     y = data['Label']
