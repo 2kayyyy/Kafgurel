@@ -1,6 +1,6 @@
 ---
 license: mit
-title: demo-app
+title: Kafgurel
 emoji: 🌍
 colorFrom: blue
 colorTo: red
@@ -9,4 +9,7 @@ sdk_version: 1.25.0
 app_file: app.py
 pinned: false
 ---
-# demo-app
+# Kafgurel
+Demo of 🤗 spaces deployment of a Romanized Nepali Detection model app
+
+
