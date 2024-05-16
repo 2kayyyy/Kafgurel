@@ -19,10 +19,15 @@ def predict_language(text):
     return predicted_label_name
 
 def git_commit_and_push(file_path, commit_message):
+    # Retrieve GitHub credentials from environment variables
     username = os.getenv('GITHUB_USERNAME')
     token = os.getenv('GITHUB_TOKEN')
+    repo_name = "Kafgurel"  # Replace with your repository name
+
     if username and token:
-        repo_url = f"https://{username}:{token}@github.com/{username}/Kafgurel.git"
+        repo_url = f"https://{username}:{token}@github.com/{username}/{repo_name}.git"
+        subprocess.run(['git', 'config', '--global', 'user.email', '"you@example.com"'])
+        subprocess.run(['git', 'config', '--global', 'user.name', '"Your Name"'])
         subprocess.run(['git', 'add', file_path])
         subprocess.run(['git', 'commit', '-m', commit_message])
         subprocess.run(['git', 'push', repo_url])
