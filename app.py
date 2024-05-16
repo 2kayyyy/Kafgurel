@@ -12,7 +12,6 @@ model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-unc
 label_map = {0: 'English', 1: 'Roman Nepali', 2: 'None'}
 emoji_map = {'English': '🇺🇸', 'Roman Nepali': '🇳🇵', 'None': '❓'}
 
-
 def predict_language(text):
     # Encode the new input text
     encoded_input = tokenizer(text, truncation=True, padding=True, return_tensors='pt')
@@ -26,12 +25,10 @@ def predict_language(text):
 
     return predicted_label_name
 
-
 def git_commit_and_push(file_path, commit_message):
     subprocess.run(['git', 'add', file_path])
     subprocess.run(['git', 'commit', '-m', commit_message])
     subprocess.run(['git', 'push'])
-
 
 # Initialize Streamlit app
 st.title('Language Prediction App')
@@ -50,12 +47,10 @@ if user_input:
             st.success('Thank you for your input!')
             data = {'text': [user_input], 'predicted_language': [language], 'feedback': [feedback]}
             df = pd.DataFrame(data)
-
             if os.path.isfile(csv_file):
                 df.to_csv(csv_file, mode='a', header=False, index=False)
             else:
                 df.to_csv(csv_file, mode='w', header=True, index=False)
-
             git_commit_and_push(csv_file, 'Update user feedback')
         else:
             correct_language = st.selectbox(
@@ -64,15 +59,12 @@ if user_input:
             )
             if st.button('Submit Correct Language'):
                 st.success('Thank you for your input!')
-                data = {'text': [user_input], 'predicted_language': [language], 'feedback': [feedback],
-                        'correct_language': [correct_language]}
+                data = {'text': [user_input], 'predicted_language': [language], 'feedback': [feedback], 'correct_language': [correct_language]}
                 df = pd.DataFrame(data)
-
                 if os.path.isfile(csv_file):
                     df.to_csv(csv_file, mode='a', header=False, index=False)
                 else:
                     df.to_csv(csv_file, mode='w', header=True, index=False)
-
                 git_commit_and_push(csv_file, 'Update user feedback')
 
 # Add a footer
