@@ -49,41 +49,89 @@ if user_input:
 
     st.write(f"The predicted language is: {language} {emoji_map[language]}")
 
-    with st.form(key='feedback_form'):
-        feedback = st.radio("Is the detected language correct?", ('Yes', 'No'))
+    # Capture feedback selection outside of the form
+    feedback = st.radio("Is the detected language correct?", ('Yes', 'No'), key='feedback_radio')
 
-        if feedback == 'No':
-            correct_language = st.selectbox("Which language is correct?", ('English', 'RomanNep', 'None'))
-        else:
-            correct_language = None
+    # Conditional display of correct language selection if feedback is No
+    correct_language = None
+    if feedback == 'No':
+        correct_language = st.selectbox("Which language is correct?", ('English', 'RomanNep', 'None'), key='correct_language_select')
 
-        submit_button = st.form_submit_button(label='Submit Feedback')
-
-        if submit_button:
-            csv_file = 'roman_nep-en.csv'
-            if feedback == 'Yes':
-                st.success('Thank you for your input!')
-                with open(csv_file, mode='a') as f:
-                    f.write(f"\n{user_input},{language}")
-                git_commit_and_push(csv_file, 'Update user feedback')
-            else:
-                st.success('Thank you for your input!')
-                with open(csv_file, mode='a') as f:
-                    f.write(f"\n{user_input},{correct_language}")
-                git_commit_and_push(csv_file, 'Update user feedback')
+    # Submit button for feedback
+    if st.button('Submit Feedback'):
+        csv_file = 'roman_nep-en.csv'
+        if feedback == 'Yes':
+            st.markdown('<div class="feedback-success">Thank you for your input!</div>', unsafe_allow_html=True)
+            with open(csv_file, mode='a') as f:
+                f.write(f"\n{user_input},{language}")
+            git_commit_and_push(csv_file, 'Update user feedback')
+        elif feedback == 'No' and correct_language:
+            st.markdown('<div class="feedback-success">Thank you for your input!</div>', unsafe_allow_html=True)
+            with open(csv_file, mode='a') as f:
+                f.write(f"\n{user_input},{correct_language}")
+            git_commit_and_push(csv_file, 'Update user feedback')
+else:
+    st.session_state.initial_prediction = None
 
 # Add a footer
 st.markdown(
     """
     <style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f2f6;
+    }
     .reportview-container .main footer {visibility: hidden;}
     .footer:after {
         content: 'Made with love by Anmol, Kaushal, Aryan'; 
         visibility: visible;
         display: block;
         position: relative;
-        padding: 5px;
+        padding: 10px;
         top: 2px;
+        text-align: center;
+        color: #555;
+        font-size: 14px;
+    }
+    .stRadio > div {
+        display: flex;
+        justify-content: center;
+        padding: 10px;
+    }
+    .stSelectbox, .stTextInput > div > div > input, .stButton > button {
+        width: 80%;
+        max-width: 400px;
+        margin: 10px auto;
+        border-radius: 5px;
+    }
+    .stTextInput > div > div > input {
+        padding: 10px;
+        border: 1px solid #ccc;
+    }
+    .stButton > button {
+        padding: 10px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        transition: background-color 0.3s;
+    }
+    .stButton > button:hover {
+        background-color: #45a049;
+    }
+    .stMarkdown {
+        text-align: center;
+        max-width: 400px;
+        margin: 20px auto;
+    }
+    .feedback-success {
+        border: 1px solid #4CAF50;
+        border-radius: 5px;
+        padding: 10px;
+        background-color: #dff0d8;
+        color: #3c763d;
+        text-align: center;
+        max-width: 400px;
+        margin: 20px auto;
     }
     </style>
     <div class="footer"></div>
