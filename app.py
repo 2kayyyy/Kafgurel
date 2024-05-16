@@ -12,47 +12,61 @@ label_map = {0: 'English', 1: 'RomanNep', 2: 'None'}
 emoji_map = {'English': '🇺🇸', 'RomanNep': '🇳🇵', 'None': '❓'}
 
 def predict_language(text):
-    # Encode the new input text
     encoded_input = tokenizer(text, truncation=True, padding=True, return_tensors='pt')
-
-    # Make the prediction
     output = model(**encoded_input)
     predicted_label = output.logits.argmax(-1).item()
-
-    # Get the label name from the label_map
     predicted_label_name = label_map[predicted_label]
-
     return predicted_label_name
 
 def git_commit_and_push(file_path, commit_message):
-    subprocess.run(['git', 'add', file_path])
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    subprocess.run(['git', 'push'])
+    username = os.getenv('GITHUB_USERNAME')
+    token = os.getenv('GITHUB_TOKEN')
+    if username and token:
+        repo_url = f"https://{username}:{token}@github.com/{username}/Kafgurel.git"
+        subprocess.run(['git', 'add', file_path])
+        subprocess.run(['git', 'commit', '-m', commit_message])
+        subprocess.run(['git', 'push', repo_url])
+    else:
+        print("GitHub credentials are not set in the environment variables")
 
 # Initialize Streamlit app
 st.title('Language Prediction App')
 
 user_input = st.text_input("Enter some text")
+
+# Initialize session state for storing the initial prediction
+if 'initial_prediction' not in st.session_state:
+    st.session_state.initial_prediction = None
+
 if user_input:
-    language = predict_language(user_input)
+    # Only predict if the user input has changed
+    if user_input != st.session_state.get('last_input', None):
+        language = predict_language(user_input)
+        st.session_state.initial_prediction = language
+        st.session_state.last_input = user_input
+    else:
+        language = st.session_state.initial_prediction
+
     st.write(f"The predicted language is: {language} {emoji_map[language]}")
 
-    feedback = st.radio("Is the detected language correct?", ('Yes', 'No'))
+    with st.form(key='feedback_form'):
+        feedback = st.radio("Is the detected language correct?", ('Yes', 'No'))
 
-    if st.button('Submit Feedback'):
-        # Append the data to a CSV file
-        csv_file = 'roman_nep-en.csv'
-        if feedback == 'Yes':
-            st.success('Thank you for your input!')
-            with open(csv_file, mode='a') as f:
-                f.write(f"\n{user_input},{language}")
-            git_commit_and_push(csv_file, 'Update user feedback')
+        if feedback == 'No':
+            correct_language = st.selectbox("Which language is correct?", ('English', 'RomanNep', 'None'))
         else:
-            correct_language = st.selectbox(
-                "Which language is correct?",
-                ('English', 'RomanNep', 'None')
-            )
-            if st.button('Submit Correct Language'):
+            correct_language = None
+
+        submit_button = st.form_submit_button(label='Submit Feedback')
+
+        if submit_button:
+            csv_file = 'roman_nep-en.csv'
+            if feedback == 'Yes':
+                st.success('Thank you for your input!')
+                with open(csv_file, mode='a') as f:
+                    f.write(f"\n{user_input},{language}")
+                git_commit_and_push(csv_file, 'Update user feedback')
+            else:
                 st.success('Thank you for your input!')
                 with open(csv_file, mode='a') as f:
                     f.write(f"\n{user_input},{correct_language}")
