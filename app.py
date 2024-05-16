@@ -1,92 +1,95 @@
 import streamlit as st
+from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer, ENGLISH_STOP_WORDS
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import make_pipeline
-from sklearn.metrics import accuracy_score, classification_report
 import os
-import logging
 import subprocess
 
-# Configure logging
-logging.basicConfig(filename='new_entries.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+# Load the tokenizer and model
+tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
+model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased')
+
+# Define the label map
+label_map = {0: 'English', 1: 'Roman Nepali', 2: 'None'}
+emoji_map = {'English': '🇺🇸', 'Roman Nepali': '🇳🇵', 'None': '❓'}
 
 
-def preprocess_text(text):
-    # Convert to lowercase
-    text = text.lower()
-    # Remove stopwords
-    text = ' '.join([word for word in text.split() if word not in ENGLISH_STOP_WORDS])
-    return text
+def predict_language(text):
+    # Encode the new input text
+    encoded_input = tokenizer(text, truncation=True, padding=True, return_tensors='pt')
+
+    # Make the prediction
+    output = model(**encoded_input)
+    predicted_label = output.logits.argmax(-1).item()
+
+    # Get the label name from the label_map
+    predicted_label_name = label_map[predicted_label]
+
+    return predicted_label_name
 
 
-def git_push():
-    try:
-        subprocess.run(["git", "config", "--global", "user.email", "aryankafle004@gmail.com"], check=True)
-        subprocess.run(["git", "config", "--global", "user.name", "2kayyyy"], check=True)
-        subprocess.run(["git", "add", "roman_nep-en.csv"], check=True)
-        subprocess.run(["git", "commit", "-m", "Update dataset with new entries"], check=True)
-        subprocess.run(["git", "push"], check=True)
-        logging.info("Changes pushed to GitHub successfully.")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"An error occurred while pushing changes to GitHub: {e}")
+def git_commit_and_push(file_path, commit_message):
+    subprocess.run(['git', 'add', file_path])
+    subprocess.run(['git', 'commit', '-m', commit_message])
+    subprocess.run(['git', 'push'])
 
 
-def main():
-    st.title("Language Detection: English, Roman Nepali, or None")
+# Initialize Streamlit app
+st.title('Language Prediction App')
 
-    # Load dataset
-    data = pd.read_csv('roman_nep-en.csv')
+user_input = st.text_input("Enter some text")
+if user_input:
+    language = predict_language(user_input)
+    st.write(f"The predicted language is: {language} {emoji_map[language]}")
 
-    # Handle missing values
-    data.dropna(subset=['Value', 'Label'], inplace=True)
+    feedback = st.radio("Is the detected language correct?", ('Yes', 'No'))
 
-    # Preprocess data
-    data['Value'] = data['Value'].apply(preprocess_text)
-    X = data['Value']
-    y = data['Label']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    if st.button('Submit Feedback'):
+        # Append the data to a CSV file
+        csv_file = 'roman_nep-en.csv'
+        if feedback == 'Yes':
+            st.success('Thank you for your input!')
+            data = {'text': [user_input], 'predicted_language': [language], 'feedback': [feedback]}
+            df = pd.DataFrame(data)
 
-    # Train model
-    model = make_pipeline(CountVectorizer(), MultinomialNB())
-    model.fit(X_train, y_train)
+            if os.path.isfile(csv_file):
+                df.to_csv(csv_file, mode='a', header=False, index=False)
+            else:
+                df.to_csv(csv_file, mode='w', header=True, index=False)
 
-    # Evaluate model
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f"Model Accuracy: {accuracy:.2f}")
-
-    # User input for prediction
-    user_input = st.text_input("Enter text to detect language:")
-    if st.button("Detect"):
-        prediction = model.predict([user_input])[0]
-        st.write(f"Predicted Language: {prediction}")
-
-        # Ask user to confirm the detected language
-        correct_label = st.selectbox("Is the detected language correct?", ["Yes", "No"])
-        if correct_label == "No":
-            # Ask user for the correct label
-            correct_label = st.selectbox("Please select the correct language", ["English", "RomanNep", "None"])
+            git_commit_and_push(csv_file, 'Update user feedback')
         else:
-            correct_label = prediction
+            correct_language = st.selectbox(
+                "Which language is correct?",
+                ('English', 'Roman Nepali', 'None')
+            )
+            if st.button('Submit Correct Language'):
+                st.success('Thank you for your input!')
+                data = {'text': [user_input], 'predicted_language': [language], 'feedback': [feedback],
+                        'correct_language': [correct_language]}
+                df = pd.DataFrame(data)
 
-        # Button to add data to dataset
-        if st.button("Add to Dataset"):
-            if user_input and correct_label:
-                # Append new data to the CSV file
-                new_data = pd.DataFrame([[user_input, correct_label]], columns=['Value', 'Label'])
-                if not os.path.isfile('roman_nep-en.csv'):
-                    new_data.to_csv('roman_nep-en.csv', index=False)
+                if os.path.isfile(csv_file):
+                    df.to_csv(csv_file, mode='a', header=False, index=False)
                 else:
-                    new_data.to_csv('roman_nep-en.csv', mode='a', header=False, index=False)
-                st.success("New data added to the dataset!")
-                # Log the new entry
-                logging.info(f"Added new entry: {user_input} - {correct_label}")
-                print(f"Logging: Added new entry: {user_input} - {correct_label}")
-                # Push changes to GitHub
-                git_push()
+                    df.to_csv(csv_file, mode='w', header=True, index=False)
 
+                git_commit_and_push(csv_file, 'Update user feedback')
 
-if __name__ == "__main__":
-    main()
+# Add a footer
+st.markdown(
+    """
+    <style>
+    .reportview-container .main footer {visibility: hidden;}
+    .footer:after {
+        content: 'Made with love by Anmol, Kaushal, Aryan'; 
+        visibility: visible;
+        display: block;
+        position: relative;
+        padding: 5px;
+        top: 2px;
+    }
+    </style>
+    <div class="footer"></div>
+    """,
+    unsafe_allow_html=True
+)
