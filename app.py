@@ -1,6 +1,5 @@
 import streamlit as st
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
-import pandas as pd
 import os
 import subprocess
 
@@ -9,8 +8,8 @@ tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased')
 
 # Define the label map
-label_map = {0: 'English', 1: 'Roman Nepali', 2: 'None'}
-emoji_map = {'English': '🇺🇸', 'Roman Nepali': '🇳🇵', 'None': '❓'}
+label_map = {0: 'English', 1: 'RomanNep', 2: 'None'}
+emoji_map = {'English': '🇺🇸', 'RomanNep': '🇳🇵', 'None': '❓'}
 
 def predict_language(text):
     # Encode the new input text
@@ -45,26 +44,18 @@ if user_input:
         csv_file = 'roman_nep-en.csv'
         if feedback == 'Yes':
             st.success('Thank you for your input!')
-            data = {'text': [user_input], 'predicted_language': [language], 'feedback': [feedback]}
-            df = pd.DataFrame(data)
-            if os.path.isfile(csv_file):
-                df.to_csv(csv_file, mode='a', header=False, index=False)
-            else:
-                df.to_csv(csv_file, mode='w', header=True, index=False)
+            with open(csv_file, mode='a') as f:
+                f.write(f"\n{user_input},{language}")
             git_commit_and_push(csv_file, 'Update user feedback')
         else:
             correct_language = st.selectbox(
                 "Which language is correct?",
-                ('English', 'Roman Nepali', 'None')
+                ('English', 'RomanNep', 'None')
             )
             if st.button('Submit Correct Language'):
                 st.success('Thank you for your input!')
-                data = {'text': [user_input], 'predicted_language': [language], 'feedback': [feedback], 'correct_language': [correct_language]}
-                df = pd.DataFrame(data)
-                if os.path.isfile(csv_file):
-                    df.to_csv(csv_file, mode='a', header=False, index=False)
-                else:
-                    df.to_csv(csv_file, mode='w', header=True, index=False)
+                with open(csv_file, mode='a') as f:
+                    f.write(f"\n{user_input},{correct_language}")
                 git_commit_and_push(csv_file, 'Update user feedback')
 
 # Add a footer
