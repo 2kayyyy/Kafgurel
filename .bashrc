@@ -1,0 +1,2 @@
+export GITHUB_USERNAME='2kayyyy'
+export GITHUB_TOKEN='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'
